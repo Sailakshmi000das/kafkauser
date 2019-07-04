@@ -1,0 +1,80 @@
+version: "2"
+services:
+  zookeeper:
+    container_name: zookeeper
+    image: zookeeper:latest
+    ports:
+      - 2181:2181
+    expose:
+      - 2181
+    network_mode: "host"
+    hostname: localhost
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000000000
+
+  kafka:
+    container_name: kafka
+    image: wurstmeister/kafka:latest
+    ports:
+      - 9092:9092
+    expose:
+      - 9092
+    depends_on:
+      - zookeeper
+    network_mode: "host"
+    hostname: localhost
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_ADVERTISED_HOST_NAME: localhost
+      KAFKA_ZOOKEEPER_CONNECT: localhost:2181
+      KAFKA_MESSAGE_MAX_BYTES: 1000000000
+
+  mongo:
+    image: mongo:3.4-xenial
+    restart: always
+    network_mode: "host"
+    ports:
+      - 27017:27017
+    expose:
+      - 27017
+
+  userservice:
+    build: userservice/
+    restart: always
+    network_mode: "host"
+    depends_on:
+      - mongo
+      - kafka
+    ports:
+      - 8050:8050
+    expose:
+      - 8050
+
+  userauthentication:
+    build: userauthentication/
+    restart: always
+    network_mode: host
+    depends_on:
+      - mysql
+      - kafka
+    ports:
+      - 8091:8091
+    expose:
+      - 8091
+
+  mysql:
+    image: mysql:5.7
+    ports:
+      - 3306:3306
+    container_name: mysql
+    environment:
+      MYSQL_DATABASE: LoginDb
+      MYSQL_USER: root
+      MYSQL_ALLOW_EMPTY_PASSWORD: "YES"
+    volumes:
+      - $HOME/data/datasql:/var/lib/mysql
+    network_mode: "host"
+    hostname: localhost
+    restart: always
+
